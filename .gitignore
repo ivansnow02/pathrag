@@ -12,7 +12,7 @@ build/
 develop-eggs/
 dist/
 downloads/
-data/
+
 eggs/
 .eggs/
 .venv/
@@ -73,7 +73,9 @@ instance/
 
 # Sphinx documentation
 docs/_build/
-
+node_modules/
+data/
+uploads/
 # PyBuilder
 .pybuilder/
 target/
