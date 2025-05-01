@@ -53,7 +53,10 @@ const ChatInput = ({ onSendMessage, isLoading, searchContext, setSearchContext }
             onChange={setSearchContext}
             cleanable={false}
             searchable={false}
-            className="search-mode-dropdown"
+            // className="search-mode-dropdown"
+            renderValue={(value, item) => {
+              return item ? item.label.replace('Search Mode: ', '') : value;
+            }}
           />
 
           <InputGroup inside className="message-input-group">
@@ -65,7 +68,8 @@ const ChatInput = ({ onSendMessage, isLoading, searchContext, setSearchContext }
               <IconButton
                 icon={<FontAwesomeIcon icon={faPaperclip} />}
                 onClick={handleAttachment}
-                className="input-icon-button"
+                // className="input-icon-button"
+                
                 appearance="subtle"
                 disabled={isLoading}
               />
@@ -90,7 +94,7 @@ const ChatInput = ({ onSendMessage, isLoading, searchContext, setSearchContext }
               <IconButton
                 icon={<FontAwesomeIcon icon={faMicrophone} />}
                 onClick={handleVoiceInput}
-                className="input-icon-button"
+                // className="input-icon-button"
                 appearance="subtle"
                 disabled={isLoading}
               />
@@ -99,7 +103,7 @@ const ChatInput = ({ onSendMessage, isLoading, searchContext, setSearchContext }
             <InputGroup.Button
               onClick={handleSend}
               disabled={isLoading || !message.trim()}
-              className="send-button"
+              // className="send-button"
             >
               {isLoading ? <Loader size="xs" /> : <SendIcon />}
             </InputGroup.Button>
