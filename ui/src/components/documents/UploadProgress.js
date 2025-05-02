@@ -2,36 +2,66 @@ import React, { useState, useEffect } from 'react';
 import { Progress, Panel, Tag, Loader } from 'rsuite';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faExclamationTriangle, faSpinner } from '@fortawesome/free-solid-svg-icons';
-import websocketService from '../../services/websocket';
+import { documentAPI } from '../../services/api';
 
 const UploadProgress = ({ document }) => {
   const [status, setStatus] = useState({
-    progress: 0,
+    progress: document.status === 'completed' ? 100 : document.status === 'processing' ? 50 : 0,
     status: document.status || 'uploading',
-    message: 'Initializing upload...'
+    message: document.status === 'completed'
+      ? 'Document processed successfully'
+      : document.status === 'processing'
+        ? 'Processing document...'
+        : 'Initializing upload...'
   });
 
+  const [intervalId, setIntervalId] = useState(null);
+
   useEffect(() => {
-    // Connect to WebSocket if not already connected
-    websocketService.connect();
+    // Function to fetch document status
+    const fetchDocumentStatus = async () => {
+      try {
+        const response = await documentAPI.getDocumentStatus(document.id);
+        if (response && response.data) {
+          const documentStatus = response.data.status;
 
-    // Add document-specific listener
-    const removeListener = websocketService.addDocumentListener(document.id, (data) => {
-      setStatus({
-        progress: data.progress || 0,
-        status: data.status || 'uploading',
-        message: data.message || 'Processing document...'
-      });
-    });
+          setStatus({
+            progress: documentStatus === 'completed' ? 100 : documentStatus === 'processing' ? 75 : 25,
+            status: documentStatus || 'uploading',
+            message: documentStatus === 'completed'
+              ? 'Document processed successfully'
+              : documentStatus === 'failed'
+                ? response.data.error_message || 'Processing failed'
+                : 'Processing document...'
+          });
 
-    // Request initial status
-    websocketService.requestDocumentStatus(document.id);
-
-    // Clean up listener on unmount
-    return () => {
-      removeListener();
+          // If document is completed or failed, clear the interval
+          if (documentStatus === 'completed' || documentStatus === 'failed') {
+            if (intervalId) {
+              clearInterval(intervalId);
+              setIntervalId(null);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching document status:', error);
+      }
     };
-  }, [document.id]);
+
+    // Fetch status immediately
+    fetchDocumentStatus();
+
+    // Set up interval to check status every 15 seconds
+    const id = setInterval(fetchDocumentStatus, 15000);
+    setIntervalId(id);
+
+    // Clean up interval on unmount
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [document.id, intervalId]);
 
   // Determine status color and icon
   const getStatusInfo = () => {
@@ -73,7 +103,7 @@ const UploadProgress = ({ document }) => {
           {statusInfo.icon} {status.status.charAt(0).toUpperCase() + status.status.slice(1)}
         </Tag>
       </div>
-      
+
       <div className="upload-progress-bar">
         <Progress.Line
           percent={status.progress}
@@ -82,7 +112,7 @@ const UploadProgress = ({ document }) => {
         />
         <span className="progress-percentage">{Math.round(status.progress)}%</span>
       </div>
-      
+
       <div className="upload-progress-message">
         {status.message}
       </div>

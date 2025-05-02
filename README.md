@@ -1,6 +1,6 @@
-# PathRAG Application
+# PathRAG - Knowledge Graph-based RAG System
 
-A comprehensive application for knowledge graph visualization, document management, and chat interactions using PathRAG (Path-based Retrieval Augmented Generation).
+This PathRAG Demo App is a comprehensive knowledge graph-based Retrieval-Augmented Generation (RAG) system that combines document processing, chat functionality, and knowledge graph visualization in a single application.
 
 ## What is PathRAG?
 
@@ -51,31 +51,21 @@ PathRAG combines multiple search strategies:
 
 ## Features
 
-### Authentication
-- JWT-based authentication system
-- User registration and login
-- 3 default users with password "Pass@123"
+### Core Functionality
+- **Document Management**: Upload, process, and manage documents (PDF, DOCX, MD, TXT, HTML, etc.)
+- **Chat Interface**: Thread-based chat system with context-aware responses
+- **Knowledge Graph**: Visualize and query the knowledge graph built from your documents
+- **User Management**: User authentication and personalization
 
-### Chat Interface
-- Interactive chat UI with message history
-- Real-time responses using PathRAG
-- Rich text rendering for responses
-
-### Knowledge Graph
-- Interactive visualization using D3.js
-- Query interface for exploring the knowledge graph
-- Node and edge visualization with different colors based on entity types
-
-### Document Management
-- Drag-and-drop document upload
-- Support for PDF, DOCX, and MD file formats
-- Real-time upload progress tracking
-- Document listing and management
-
-### Progressive Web App (PWA)
-- Offline capabilities
-- Installable on desktop and mobile devices
-- Responsive design for all screen sizes
+### Technical Features
+- **React Frontend**: Modern UI built with React and RSuite components
+- **FastAPI Backend**: High-performance Python API with async support
+- **SQLite Database**: Lightweight database for storing user data, chat threads, and document metadata
+- **Thread-Based Chat**: Persistent chat threads with unique IDs
+- **Document Processing**: Automatic extraction of text and entities from various document formats
+- **Knowledge Graph Visualization**: Interactive visualization using D3.js
+- **Theme Customization**: Customizable UI themes (blue, red, violet)
+- **Automatic Document Reloading**: System checks document status every 15 seconds and automatically reloads when processing completes
 
 ## Tech Stack
 
@@ -84,7 +74,8 @@ PathRAG combines multiple search strategies:
 - **SQLite**: Lightweight database for storing users, chats, and documents
 - **JWT**: JSON Web Tokens for authentication
 - **PathRAG**: Path-based Retrieval Augmented Generation for knowledge graph and chat functionality
-- **NetworkX**: Graph data structure and algorithms
+- **NetworkX**: Graph data structure and algorithms (for development/demo)
+- **NanoVectorDB**: Local file-based vector storage (for development/demo)
 
 ### Frontend
 - **React**: JavaScript library for building user interfaces
@@ -93,6 +84,7 @@ PathRAG combines multiple search strategies:
 - **React Router**: Navigation and routing
 - **Axios**: HTTP client for API requests
 - **React Dropzone**: Drag-and-drop file upload
+- **Font Awesome**: Icon library
 
 ## Project Structure
 
@@ -297,50 +289,120 @@ If you prefer to set up and run the components separately, follow these instruct
   - Username: user3, Password: Pass@123
 - Or register a new account using the registration form
 
-### Chat
+### Chat Threads
 1. Navigate to the Chat page
-2. Type your message in the input field
-3. Press Enter or click the send button
-4. View the AI response
+2. Click "New Chat" to start a new thread
+3. Type your message in the input field
+4. Press Enter or click the send button
+5. View the AI response
+6. Your chat threads are saved and can be accessed from the sidebar
+7. Each thread has a unique ID and maintains its own conversation history
+8. Thread titles are automatically updated based on the first message
 
 ### Knowledge Graph
 1. Navigate to the Knowledge Graph page
 2. Enter a query in the search field to filter the graph
 3. Interact with the graph by dragging nodes
 4. Zoom in/out using the mouse wheel
+5. Click on nodes to see entity details
 
 ### Document Management
 1. Navigate to the Documents page
 2. Click "Upload Document" button
 3. Drag and drop a file or click to select a file
 4. Monitor the upload progress
-5. View the uploaded documents in the list
+5. The system automatically checks document status every 15 seconds
+6. When processing completes, the system automatically reloads the PathRAG instance
+7. You can also manually reload the PathRAG instance by clicking the "Reload Documents" button
+8. View the uploaded documents in the list with their processing status
+
+## Data Models
+
+### User
+- `id`: Integer (Primary Key)
+- `username`: String (Unique)
+- `email`: String (Unique)
+- `hashed_password`: String
+- `created_at`: DateTime
+- `theme`: String (Default: "blue")
+
+### Thread
+- `id`: Integer (Primary Key)
+- `uuid`: String (Unique)
+- `user_id`: Integer (Foreign Key to User)
+- `title`: String
+- `created_at`: DateTime
+- `updated_at`: DateTime
+- `is_deleted`: Boolean (Default: False)
+
+### Chat
+- `id`: Integer (Primary Key)
+- `user_id`: Integer (Foreign Key to User)
+- `thread_id`: Integer (Foreign Key to Thread)
+- `role`: String ('user' or 'system')
+- `message`: Text
+- `created_at`: DateTime
+
+### Document
+- `id`: Integer (Primary Key)
+- `user_id`: Integer (Foreign Key to User)
+- `filename`: String
+- `content_type`: String
+- `file_path`: String
+- `file_size`: Integer
+- `uploaded_at`: DateTime
+- `status`: String
+- `processed_at`: DateTime (Nullable)
+- `error_message`: Text (Nullable)
 
 ## API Endpoints
 
 ### Authentication
-- `POST /token` - Get access token
-- `POST /register` - Register new user
-- `GET /users/me` - Get current user
+- `POST /token`: Login and get access token
+- `POST /register`: Register a new user
+- `GET /users/me`: Get current user information
 
 ### Users
-- `GET /users` - Get all users
-- `GET /users/{user_id}` - Get user by ID
+- `GET /users/`: Get all users
+- `POST /users/theme`: Update user theme
+
+### Chat Threads
+- `GET /chats/threads`: Get all chat threads
+- `POST /chats/threads`: Create a new chat thread
+- `GET /chats/threads/{thread_uuid}`: Get a specific thread with all its chats
+- `PUT /chats/threads/{thread_uuid}`: Update a thread's title
+- `DELETE /chats/threads/{thread_uuid}`: Mark a thread as deleted
 
 ### Chats
-- `GET /chats` - Get all chats for current user
-- `POST /chats` - Create new chat
-- `GET /chats/{chat_id}` - Get chat by ID
+- `GET /chats/`: Get all chats
+- `GET /chats/recent`: Get the 5 most recent chat threads
+- `POST /chats/chat/{thread_uuid}`: Create a new chat message in a thread
 
 ### Documents
-- `GET /documents` - Get all documents for current user
-- `POST /documents` - Upload new document
-- `GET /documents/{document_id}` - Get document by ID
-- `GET /documents/{document_id}/status` - Get document processing status
+- `GET /documents/`: Get all documents
+- `POST /documents/upload`: Upload a document
+- `GET /documents/{document_id}`: Get a specific document
+- `GET /documents/{document_id}/status`: Get document processing status
+- `POST /documents/reload`: Reload the PathRAG instance to recognize new documents
 
 ### Knowledge Graph
-- `GET /knowledge-graph` - Get entire knowledge graph
-- `POST /knowledge-graph/query` - Query knowledge graph
+- `GET /knowledge-graph/`: Get the knowledge graph
+- `POST /knowledge-graph/query`: Query the knowledge graph
+
+## Storage Options
+
+### Demo/Development (Default)
+- **Vector Storage**: NanoVectorDB (local file-based vector store)
+- **Graph Storage**: NetworkX (local in-memory graph)
+- **Key-Value Storage**: JsonKVStorage (local file-based storage)
+
+> **Note**: These storage options are suitable for demonstration and development purposes only. They are not recommended for production use with large datasets or high traffic.
+
+### Production Options
+For production environments, consider using these alternatives:
+- **Vector Databases**: PostgreSQL (pgvector), Pinecone, DataStax, Azure Cognitive Search, Azure SQL(Preview)
+- **Graph Databases**: Neo4j, ArangoDB, Apache AGE (PostgreSQL extension), CosmosDB, Azure SQL
+- **Document Databases**: MongoDB, Cassandra, CosmosDB
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -369,13 +431,21 @@ PathRAG is particularly effective for:
 - **Knowledge graph quality**: The system's effectiveness depends on the quality of entity and relationship extraction
 - **Computational complexity**: Graph operations can be more resource-intensive than simple vector searches
 - **Domain specificity**: May require domain-specific entity extraction for specialized fields
+- **Storage limitations**: The default storage options (NanoVectorDB, NetworkX) are not suitable for large-scale production use
 
-## Future Directions
+## Authors & Contributors
 
-- **Temporal knowledge graphs**: Incorporating time-based relationships and changes
-- **Multi-modal knowledge**: Integrating information from images, audio, and video
-- **Interactive graph refinement**: Allowing users to correct and enhance the knowledge graph
-- **Federated knowledge graphs**: Connecting information across multiple knowledge bases
+### PathRAG Core Logic Research Team
+- Boyu Chen¹, Zirui Guo¹,², Zidan Yang¹,³, Yuluo Chen¹, Junze Chen¹, Zhenghao Liu³, Chuan Shi¹, Cheng Yang¹
+  1. Beijing University of Posts and Telecommunications
+  2. University of Hong Kong
+  3. Northeastern University
+
+  Contact: chenbys4@bupt.edu.cn, yangcheng@bupt.edu.cn
+
+### Demo Application Contributor
+- Robert Dennyson, Solution Architect, UK
+- Contact: robertdennyson@live.in
 
 ## Acknowledgements
 - PathRAG for the knowledge graph and retrieval augmented generation capabilities
