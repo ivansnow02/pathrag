@@ -17,7 +17,7 @@ const Login = () => {
       <Content>
         <FlexboxGrid justify="center" align="middle" style={{ height: '100vh' }}>
           <FlexboxGrid.Item colspan={12} md={8} lg={6}>
-            <Panel header={<h2 className="text-center">Enterprise Knowledge Graph</h2>} bordered>
+            <Panel header={<h2 className="text-center">PathRAG - Enterprise Knowledge Graph</h2>} bordered>
               <LoginForm />
               
               <div className="text-center mt-3">

@@ -72,7 +72,7 @@ async def get_thread(
     ).order_by(Chat.created_at.asc()).all()
 
     # Create response with thread and chats
-    result = ThreadWithChats.from_orm(thread)
+    result = ThreadWithChats.model_validate(thread)
     result.chats = chats
 
     return result
@@ -141,8 +141,9 @@ async def get_recent_threads(db: Session = Depends(get_db), current_user: User =
 
     return {"threads": recent_threads}
 
-@router.post("/", response_model=ChatResponse)
+@router.post("/chat/{thread_uuid}", response_model=ChatResponse)
 async def create_chat(
+    thread_uuid: str,
     chat: ChatCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -150,11 +151,10 @@ async def create_chat(
     """Create a new chat message and get a response"""
     # Find or create thread
     thread_id = None
-
-    if chat.thread_id:
+    if thread_uuid:
         # Use existing thread ID
         thread = db.query(Thread).filter(
-            Thread.id == chat.thread_id,
+            Thread.uuid == thread_uuid,
             Thread.user_id == current_user.id,
             Thread.is_deleted == False
         ).first()
@@ -162,34 +162,10 @@ async def create_chat(
         if thread is None:
             raise HTTPException(status_code=404, detail="Thread not found")
 
-        thread_id = thread.id
-    elif chat.thread_uuid:
-        # Find thread by UUID
-        thread = db.query(Thread).filter(
-            Thread.uuid == chat.thread_uuid,
-            Thread.user_id == current_user.id,
-            Thread.is_deleted == False
-        ).first()
-
-        if thread is None:
-            raise HTTPException(status_code=404, detail="Thread not found")
-
-        thread_id = thread.id
-    else:
-        # Create new thread
-        thread_uuid = str(uuid_pkg.uuid4())
-        thread = Thread(
-            uuid=thread_uuid,
-            user_id=current_user.id,
-            title=chat.message[:50] if len(chat.message) > 50 else chat.message
-        )
-        db.add(thread)
-        db.commit()
-        db.refresh(thread)
         thread_id = thread.id
 
     # Query PathRAG
-    response_text = await rag.aquery(chat.message, param=QueryParam(mode="hybrid"))
+    response_text = await rag.aquery(chat.message, param=QueryParam(mode=chat.search_context))
 
     # Create user message record
     user_chat = Chat(
@@ -211,7 +187,7 @@ async def create_chat(
 
     # Update thread title and timestamp
     thread.title = chat.message[:50] if len(chat.message) > 50 else chat.message
-    thread.updated_at = datetime.datetime.utcnow()
+    thread.updated_at = datetime.datetime.now(datetime.timezone.utc)
 
     db.commit()
     db.refresh(user_chat)
@@ -219,14 +195,3 @@ async def create_chat(
     # Return the user message
     return user_chat
 
-@router.get("/{chat_id}", response_model=ChatResponse)
-async def get_chat(
-    chat_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Get a specific chat message"""
-    chat = db.query(Chat).filter(Chat.id == chat_id, Chat.user_id == current_user.id).first()
-    if chat is None:
-        raise HTTPException(status_code=404, detail="Chat not found")
-    return chat

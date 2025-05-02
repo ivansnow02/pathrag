@@ -17,14 +17,16 @@ class ThreadResponse(ThreadBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class ThreadList(BaseModel):
     threads: List[ThreadResponse]
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 # Chat schemas
 class ChatBase(BaseModel):
@@ -33,6 +35,7 @@ class ChatBase(BaseModel):
 
 class ChatCreate(ChatBase):
     thread_id: Optional[int] = None
+    search_context: Optional[str] = None
     thread_uuid: Optional[str] = None
 
 class ChatResponse(ChatBase):
@@ -41,17 +44,20 @@ class ChatResponse(ChatBase):
     thread_id: int
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class ChatList(BaseModel):
     chats: List[ChatResponse]
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class ThreadWithChats(ThreadResponse):
     chats: List[ChatResponse] = []
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }

@@ -81,7 +81,7 @@ const ChatMessage = ({ message, isUser }) => {
 
       <div className="message-content">
         <div className="message-header">
-          <span className="message-sender">{isUser ? currentUser?.username : 'Enterprise AI'}</span>
+          <span className="message-sender">{isUser ? currentUser?.username : 'Enterprise KG AI'}</span>
           <span className="message-time">{new Date().toLocaleTimeString()}</span>
         </div>
 

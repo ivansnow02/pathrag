@@ -1,13 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-import networkx as nx
-import json
 
-from models.database import get_db, User
+from api.features.rag_manager import get_rag_instance
+from models.database import User
 from api.auth.jwt_handler import get_current_active_user
 from .schemas import Graph, GraphQuery, Node, Edge
-from PathRAG import PathRAG, QueryParam
-from PathRAG.storage import NetworkXStorage
+from PathRAG import PathRAG
 
 # Initialize PathRAG
 rag = PathRAG(working_dir="./data")
@@ -21,6 +18,7 @@ router = APIRouter(
 @router.post("/query", response_model=Graph)
 async def query_knowledge_graph(query: GraphQuery, current_user: User = Depends(get_current_active_user)):
     try:
+        rag = get_rag_instance()
         # Get the knowledge graph from PathRAG
         knowledge_graph = rag.chunk_entity_relation_graph
         
@@ -58,6 +56,7 @@ async def query_knowledge_graph(query: GraphQuery, current_user: User = Depends(
 @router.get("/", response_model=Graph)
 async def get_knowledge_graph(current_user: User = Depends(get_current_active_user)):
     try:
+        rag = get_rag_instance()
         # Get the knowledge graph from PathRAG
         knowledge_graph = rag.chunk_entity_relation_graph
         

@@ -19,14 +19,16 @@ class DocumentResponse(DocumentBase):
     processed_at: Optional[datetime] = None
     error_message: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class DocumentList(BaseModel):
     documents: List[DocumentResponse]
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class UploadStatus(BaseModel):
     filename: str

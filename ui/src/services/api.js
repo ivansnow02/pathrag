@@ -82,9 +82,10 @@ export const chatAPI = {
     }
     return api.post('/chats', data);
   },
-  sendChatToThread: (threadUuid, message) => {
-    return api.post('/chats', {
+  sendChatToThread: (threadUuid, searchContext, message) => {
+    return api.post(`/chats/chat/${threadUuid}`, {
       message,
+      search_context: searchContext,
       thread_uuid: threadUuid
     });
   },

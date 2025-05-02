@@ -158,7 +158,7 @@ const Layout = ({ children }) => {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <span>Enterprise KG</span>
+            <span>PathRAG</span>
           </div>
         </Sidenav.Header>
 
