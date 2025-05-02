@@ -14,7 +14,8 @@ import {
   faUser,
   faPalette,
   faBars,
-  faCog
+  faCog,
+  faPlus
 } from '@fortawesome/free-solid-svg-icons';
 
 const Layout = ({ children }) => {
@@ -54,15 +55,15 @@ const Layout = ({ children }) => {
     localStorage.setItem('sidebarExpanded', JSON.stringify(expanded));
   }, [expanded]);
 
-  // Fetch recent chats
+  // Fetch recent chat threads
   useEffect(() => {
-    const fetchRecentChats = async () => {
+    const fetchRecentThreads = async () => {
       if (isAuthenticated) {
         try {
           setIsLoadingChats(true);
-          const response = await chatAPI.getRecentChats();
-          if (response && response.data) {
-            setRecentChats(response.data);
+          const response = await chatAPI.getRecentThreads();
+          if (response && response.data && response.data.threads) {
+            setRecentChats(response.data.threads);
           }
         } catch (error) {
           // Silently handle the error - don't show error in console
@@ -73,9 +74,9 @@ const Layout = ({ children }) => {
       }
     };
 
-    fetchRecentChats();
+    fetchRecentThreads();
 
-    // Re-fetch chats when authentication status changes
+    // Re-fetch threads when authentication status changes
   }, [isAuthenticated]);
 
   const handleSelect = (eventKey) => {
@@ -96,9 +97,9 @@ const Layout = ({ children }) => {
     setExpanded(!expanded);
   };
 
-  const handleChatSelect = (chatId) => {
-    // Navigate to the specific chat
-    navigate(`/chat/${chatId}`);
+  const handleThreadSelect = (threadUuid) => {
+    // Navigate to the specific thread
+    navigate(`/chat/${threadUuid}`);
 
     // Auto-collapse sidebar on mobile after selection
     if (mobile) {
@@ -157,7 +158,7 @@ const Layout = ({ children }) => {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <span>PathRAG</span>
+            <span>Enterprise KG</span>
           </div>
         </Sidenav.Header>
 
@@ -174,6 +175,31 @@ const Layout = ({ children }) => {
               <Nav.Item
                 eventKey="/chat"
                 icon={<FontAwesomeIcon icon={faComments} className="nav-icon" />}
+                onClick={() => {
+                  // Check if there's a thread UUID in localStorage
+                  const threadId = localStorage.getItem('current_thread_uuid');
+                  if (threadId) {
+                    // Navigate to the existing thread
+                    navigate(`/chat/${threadId}`);
+                  } else {
+                    // Create a new thread
+                    (async () => {
+                      try {
+                        const response = await chatAPI.createThread("New Chat");
+                        if (response && response.data && response.data.uuid) {
+                          // Save the thread UUID to localStorage
+                          localStorage.setItem('current_thread_uuid', response.data.uuid);
+                          // Navigate to the new thread
+                          navigate(`/chat/${response.data.uuid}`);
+                        }
+                      } catch (error) {
+                        console.error("Failed to create new chat thread", error);
+                        // Fallback to the base chat route
+                        navigate('/chat');
+                      }
+                    })();
+                  }
+                }}
               >
                 Chats
               </Nav.Item>
@@ -193,34 +219,70 @@ const Layout = ({ children }) => {
               </Nav.Item>
             </Nav>
 
-            {/* Recent Chats Section - Only show if there are chats */}
-            {recentChats.length > 0 && (
+            {/* Chat Section */}
+            <div style={{
+              marginTop: 30,
+              padding: '0 16px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              paddingTop: 16
+            }}>
               <div style={{
-                marginTop: 30,
-                padding: '0 16px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                paddingTop: 16
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 12
               }}>
                 <div style={{
                   color: 'var(--textMuted)',
                   fontSize: '0.85rem',
-                  marginBottom: 12,
                   fontWeight: 'bold',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}>
                   Recent Chats
                 </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      // Create a new thread
+                      const response = await chatAPI.createThread("New Chat");
+                      if (response && response.data && response.data.uuid) {
+                        // Save the thread UUID to localStorage
+                        localStorage.setItem('current_thread_uuid', response.data.uuid);
+                        // Navigate to the thread
+                        handleThreadSelect(response.data.uuid);
+                      }
+                    } catch (error) {
+                      console.error("Failed to create new chat thread", error);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: 'var(--primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <FontAwesomeIcon icon={faPlus} size="xs" />
+                  New Chat
+                </button>
+              </div>
 
                 {isLoadingChats ? (
                   <div style={{ color: 'var(--textMuted)', fontSize: '0.9rem', padding: '8px 0' }}>
                     Loading...
                   </div>
                 ) : (
-                  recentChats.map(chat => (
+                  recentChats.map(thread => (
                     <div
-                      key={chat.id}
-                      onClick={() => handleChatSelect(chat.id)}
+                      key={thread.id}
+                      onClick={() => handleThreadSelect(thread.uuid)}
                       style={{
                         padding: '10px 12px',
                         borderRadius: '4px',
@@ -249,20 +311,19 @@ const Layout = ({ children }) => {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis'
                       }}>
-                        {chat.title || 'Untitled Chat'}
+                        {thread.title || 'New Chat'}
                       </div>
                       <div style={{
                         color: 'var(--textMuted)',
                         fontSize: '0.75rem',
                         marginTop: 2
                       }}>
-                        {chat.created_at || chat.date || 'Recent'}
+                        {thread.updated_at ? new Date(thread.updated_at).toLocaleDateString() : 'Recent'}
                       </div>
                     </div>
                   ))
                 )}
               </div>
-            )}
           </Sidenav.Body>
         </Sidenav>
 

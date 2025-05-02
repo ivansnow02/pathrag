@@ -40,6 +40,11 @@ function App() {
             <ChatPage />
           </ProtectedRoute>
         } />
+        <Route path="/chat/:threadId" element={
+          <ProtectedRoute>
+            <ChatPage />
+          </ProtectedRoute>
+        } />
         <Route path="/knowledge-graph" element={
           <ProtectedRoute>
             <KnowledgeGraphPage />

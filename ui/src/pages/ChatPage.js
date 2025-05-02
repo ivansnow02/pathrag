@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Loader } from 'rsuite';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ChatMessage from '../components/chat/ChatMessage';
 import ChatInput from '../components/chat/ChatInput';
 import { chatAPI } from '../services/api';
+import { saveThreadUUID, getThreadUUID } from '../utils/threadStorage';
 import '../styles/chat.css';
 
 const ChatPage = () => {
+  const { threadId } = useParams();
+  const navigate = useNavigate();
+  const [currentThreadId, setCurrentThreadId] = useState(threadId);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -14,38 +19,70 @@ const ChatPage = () => {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
-  // Fetch chat history
+  // Check for thread ID or create a new one
   useEffect(() => {
-    const fetchChats = async () => {
+    const initializeThread = async () => {
+      // If we have a thread ID in the URL, use it
+      if (threadId) {
+        setCurrentThreadId(threadId);
+        saveThreadUUID(threadId);
+        return;
+      }
+
+      // If we have a thread ID in localStorage, redirect to it
+      const storedThreadId = getThreadUUID();
+      if (storedThreadId) {
+        navigate(`/chat/${storedThreadId}`, { replace: true });
+        return;
+      }
+
+      // Otherwise, create a new thread
+      try {
+        const response = await chatAPI.createThread("New Chat");
+        if (response && response.data && response.data.uuid) {
+          const newThreadId = response.data.uuid;
+          saveThreadUUID(newThreadId);
+          navigate(`/chat/${newThreadId}`, { replace: true });
+        }
+      } catch (error) {
+        console.error("Failed to create new chat thread", error);
+      }
+    };
+
+    initializeThread();
+  }, [threadId, navigate]);
+
+  // Fetch chat history for the current thread
+  useEffect(() => {
+    const fetchThreadChats = async () => {
+      if (!currentThreadId) return;
+
       setLoading(true);
 
       try {
-        const response = await chatAPI.getChats();
+        const response = await chatAPI.getThread(currentThreadId);
 
-        // Format messages
-        const formattedMessages = response.data.chats.map((chat) => [
-          {
-            id: `${chat.id}-user`,
+        if (response && response.data && response.data.chats) {
+          // Format messages from the thread
+          const formattedMessages = response.data.chats.map((chat) => ({
+            id: `${chat.id}`,
             content: chat.message,
-            isUser: true,
-          },
-          {
-            id: `${chat.id}-ai`,
-            content: chat.response,
-            isUser: false,
-          },
-        ]).flat();
+            isUser: chat.role === 'user',
+          }));
 
-        setMessages(formattedMessages);
+          setMessages(formattedMessages);
+        }
       } catch (error) {
-        console.error('Error fetching chats:', error);
+        console.error('Error fetching thread chats:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchChats();
-  }, []);
+    if (currentThreadId) {
+      fetchThreadChats();
+    }
+  }, [currentThreadId]);
 
   // Function to scroll to bottom
   const scrollToBottom = () => {
@@ -69,7 +106,7 @@ const ChatPage = () => {
 
   // Send message
   const handleSendMessage = async (message) => {
-    if (!message.trim() || sending) return;
+    if (!message.trim() || sending || !currentThreadId) return;
 
     // Add user message to state
     const userMessage = {
@@ -82,21 +119,25 @@ const ChatPage = () => {
     setSending(true);
 
     try {
-      // Send message to API with search mode
-      console.log(`Sending message with search mode: ${searchContext}`);
-      const response = await chatAPI.createChat({
-        message: message,
-        mode: searchContext
-      });
+      // Send message to API with thread UUID and search mode
+      console.log(`Sending message to thread ${currentThreadId} with search mode: ${searchContext}`);
+      const response = await chatAPI.sendChatToThread(currentThreadId, message);
 
-      // Add AI response to state
-      const aiMessage = {
-        id: `${response.data.id}-ai`,
-        content: response.data.response,
-        isUser: false,
-      };
+      if (response && response.data) {
+        // Refresh the thread to get both user message and AI response
+        const threadResponse = await chatAPI.getThread(currentThreadId);
 
-      setMessages((prevMessages) => [...prevMessages, aiMessage]);
+        if (threadResponse && threadResponse.data && threadResponse.data.chats) {
+          // Format messages from the thread
+          const formattedMessages = threadResponse.data.chats.map((chat) => ({
+            id: `${chat.id}`,
+            content: chat.message,
+            isUser: chat.role === 'user',
+          }));
+
+          setMessages(formattedMessages);
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error);
 

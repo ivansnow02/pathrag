@@ -1,8 +1,8 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Float
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 import datetime
-import os
+import uuid
 
 # Create SQLite database engine
 DATABASE_URL = "sqlite:///./pathrag.db"
@@ -26,8 +26,25 @@ class User(Base):
     theme = Column(String, nullable=True, default="blue")
 
     # Relationships
+    threads = relationship("Thread", back_populates="user")
     chats = relationship("Chat", back_populates="user")
     documents = relationship("Document", back_populates="user")
+
+# Define Thread model
+class Thread(Base):
+    __tablename__ = "threads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    uuid = Column(String, unique=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    title = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    is_deleted = Column(Boolean, default=False)
+
+    # Relationships
+    user = relationship("User", back_populates="threads")
+    chats = relationship("Chat", back_populates="thread", cascade="all, delete-orphan")
 
 # Define Chat model
 class Chat(Base):
@@ -35,12 +52,14 @@ class Chat(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    thread_id = Column(Integer, ForeignKey("threads.id"))
+    role = Column(String)  # 'user' or 'system'
     message = Column(Text)
-    response = Column(Text)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     # Relationships
     user = relationship("User", back_populates="chats")
+    thread = relationship("Thread", back_populates="chats")
 
 # Define Document model
 class Document(Base):
@@ -53,6 +72,9 @@ class Document(Base):
     file_path = Column(String)
     file_size = Column(Integer)
     uploaded_at = Column(DateTime, default=datetime.datetime.utcnow)
+    status = Column(String, nullable=True)
+    processed_at = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="documents")

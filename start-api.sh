@@ -28,6 +28,6 @@ echo -e "${GREEN}Backend dependencies installed.${NC}"
 # Start backend API
 echo -e "${BLUE}Starting backend API on port 8000...${NC}"
 cd "$(dirname "$0")"
-python main.py
+uvicorn main:app --host 0.0.0.0 --port 8000
 
 echo -e "${GREEN}API server stopped.${NC}"

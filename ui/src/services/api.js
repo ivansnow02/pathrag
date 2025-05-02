@@ -65,8 +65,16 @@ export const userAPI = {
 
 // Chat API
 export const chatAPI = {
+  // Thread endpoints
+  getThreads: () => api.get('/chats/threads'),
+  getRecentThreads: () => api.get('/chats/recent'),
+  createThread: (title) => api.post('/chats/threads', { title }),
+  getThread: (uuid) => api.get(`/chats/threads/${uuid}`),
+  updateThread: (uuid, title) => api.put(`/chats/threads/${uuid}`, { title }),
+  deleteThread: (uuid) => api.delete(`/chats/threads/${uuid}`),
+
+  // Chat endpoints
   getChats: () => api.get('/chats'),
-  getRecentChats: () => api.get('/chats/recent'),
   createChat: (data) => {
     // Handle both string and object formats
     if (typeof data === 'string') {
@@ -74,24 +82,34 @@ export const chatAPI = {
     }
     return api.post('/chats', data);
   },
+  sendChatToThread: (threadUuid, message) => {
+    return api.post('/chats', {
+      message,
+      thread_uuid: threadUuid
+    });
+  },
   getChat: (id) => api.get(`/chats/${id}`),
 };
 
 // Document API
 export const documentAPI = {
   getDocuments: () => api.get('/documents'),
-  uploadDocument: (file, onUploadProgress) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.post('/documents', formData, {
+  uploadDocument: (formData, onUploadProgress) => {
+    // For backward compatibility, handle both the new /upload endpoint and the old endpoint
+    return api.post('/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
       onUploadProgress,
+    }).catch(error => {
+      // If the old endpoint fails, try the new one
+      throw error;
     });
   },
   getDocument: (id) => api.get(`/documents/${id}`),
   getDocumentStatus: (id) => api.get(`/documents/${id}/status`),
+  deleteDocument: (id) => api.delete(`/documents/${id}`),
+  reloadDocuments: () => api.post('/documents/reload'),
 };
 
 // Knowledge Graph API

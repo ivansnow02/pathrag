@@ -21,6 +21,6 @@ echo Backend dependencies installed.
 
 REM Start backend API
 echo Starting backend API on port 8000...
-python main.py
+uvicorn main:app --host 0.0.0.0 --port 8000
 
 echo API server stopped.
